@@ -58,6 +58,7 @@ The system supports multi-turn conversations, interruption handling, and dynamic
 * Python
 * Gemini API (LLM)
 * LangChain (Prompt Templates)
+* LangGraph (Stateful Workflow Management)
 * JSON (Knowledge Base)
 
 ---
@@ -67,11 +68,13 @@ The system supports multi-turn conversations, interruption handling, and dynamic
 ```
 Autostream-agent/
 │── main.py
+│── langgraph_agent.py
 │── intent.py
 │── rag.py
 │── llm.py
 │── tools.py
 │── knowledge_base.json
+│── requirements.txt
 │── .env
 ```
 
@@ -115,11 +118,13 @@ python main.py
 
 ## Architecture Explanation
 
-This project uses LangChain as the framework for integrating LLM-based reasoning with structured workflows. LangChain was chosen because it provides a simple and modular way to design prompt-driven applications while maintaining flexibility in how LLM calls are managed. Instead of using a fully automated agent framework like AutoGen, this implementation uses a controlled state machine approach to ensure predictable and stable behavior.
+This project uses LangGraph along with LangChain to implement a stateful, multi-step conversational agent. LangGraph was chosen because it allows modeling the conversation flow as a graph of nodes and transitions, making the system modular, scalable, and easier to manage compared to traditional if-else logic.
 
-State management is handled using a dictionary-based state object that tracks the current intent and step in the conversation (e.g., name, email, platform). This allows the system to maintain context across multiple turns and resume the correct step after interruptions. The flow is divided into two modes: normal conversation mode and lead capture mode. In normal mode, the system uses intent detection to decide whether to respond using RAG or transition into lead capture. In lead capture mode, inputs are validated and processed sequentially, while still allowing interruptions such as user queries or cancellation.
+Each stage of the conversation is represented as a node in the graph, such as intent detection and lead capture. The system maintains a structured state object that stores key information like intent, current step, user details (name, email, platform), and response. This state is passed across nodes, enabling memory across multiple turns.
 
-This hybrid design combines deterministic control flow with LLM-based reasoning, ensuring both reliability and flexibility in handling real-world conversations.
+The workflow begins with the intent node, which classifies user input using the Gemini LLM. Based on the detected intent, the system either responds using RAG (for inquiries) or transitions to the lead capture node (for high-intent users). The lead capture node manages step-by-step data collection while handling interruptions and cancellations.
+
+This architecture combines deterministic control flow with LLM reasoning, ensuring both reliability and flexibility. Compared to a manual state machine, LangGraph provides a cleaner abstraction for managing transitions and maintaining conversational state.
 
 ---
 
@@ -127,18 +132,18 @@ This hybrid design combines deterministic control flow with LLM-based reasoning,
 
 To deploy this agent on WhatsApp, the system can be integrated using the WhatsApp Business API or services like Twilio.
 
-The architecture would involve setting up a webhook endpoint (e.g., using Flask or FastAPI) that listens for incoming messages from WhatsApp. When a user sends a message, WhatsApp forwards it to the webhook as an HTTP POST request. The server extracts the message content and passes it to the chatbot logic (main.py).
+The architecture would involve setting up a webhook endpoint using a framework like Flask or FastAPI. This webhook listens for incoming messages from WhatsApp. When a user sends a message, WhatsApp forwards it as an HTTP POST request to the webhook.
 
-The chatbot processes the input using intent detection, RAG, or lead capture logic and generates a response. This response is then sent back to the user via the WhatsApp API.
+The server extracts the message content and passes it to the LangGraph agent. The agent processes the input using intent detection, RAG, or lead capture logic and generates a response. This response is then sent back to the user via the WhatsApp API.
 
-Key steps:
+### Steps:
 
-1. Set up a webhook server (Flask/FastAPI)
+1. Set up a webhook server (Flask or FastAPI)
 2. Configure WhatsApp Business API or Twilio webhook URL
-3. Forward incoming messages to chatbot logic
-4. Send responses back using API calls
+3. Forward incoming messages to the LangGraph agent
+4. Send generated responses back using API calls
 
-This setup allows real-time, scalable communication between users and the AI agent.
+This setup enables real-time, scalable communication between users and the AI agent.
 
 ---
 
@@ -149,10 +154,14 @@ User: Hi
 Bot: Hello! How can I help you?  
 
 User: What is pricing?  
-Bot: [Displays pricing]  
+Bot: Basic Plan: $29/month  
+     Pro Plan: $79/month  
 
 User: I want to buy  
 Bot: What's your name?  
+
+User: John  
+Bot: Please provide your email.  
 ```
 
 ---
@@ -163,7 +172,7 @@ This project demonstrates a real-world AI agent that combines:
 
 * LLM-based reasoning
 * Retrieval-Augmented Generation
-* Structured state management
+* LangGraph-based state management
 * Tool execution
 
 It showcases how conversational AI systems can be designed to be both intelligent and reliable.
