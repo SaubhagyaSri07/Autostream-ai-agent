@@ -3,19 +3,16 @@ from rag import get_answer
 from tools import mock_lead_capture
 import re
 
-# 🔹 Detect if input is a question
 def is_question(text):
     text = text.lower()
     question_words = ["what", "how", "why", "price", "plan", "cost", "feature", "refund", "support"]
     return "?" in text or any(word in text for word in question_words)
 
-# 🔹 Detect cancel intent
 def is_cancel(text):
     text = text.lower()
     cancel_words = ["cancel", "stop", "exit", "leave", "dont want", "do not want", "not interested"]
     return any(word in text for word in cancel_words)
 
-# 🔹 Validators
 def is_valid_email(text):
     pattern = r'^[\w\.-]+@[\w\.-]+\.[a-zA-Z]{2,}$'
     return re.match(pattern, text) is not None
@@ -23,7 +20,6 @@ def is_valid_email(text):
 def is_valid_name(text):
     return all(part.isalpha() for part in text.split()) and len(text.strip()) > 1
 
-# 🔹 Normalize platform
 def normalize_platform(text):
     text = text.lower()
     if "youtube" in text:
@@ -34,7 +30,6 @@ def normalize_platform(text):
         return "Twitter/X"
     return text.capitalize()
 
-# 🔹 Step prompts
 def get_step_prompt(step):
     return {
         "name": "What's your name?",
@@ -42,7 +37,6 @@ def get_step_prompt(step):
         "platform": "Which platform do you create content on? (YouTube/Instagram/etc.)"
     }.get(step, "")
 
-# 🔹 Reset state
 def reset_state():
     return {
         "intent": None,
@@ -50,7 +44,7 @@ def reset_state():
         "name": None,
         "email": None,
         "platform": None,
-        "plan": None  # ⭐ BONUS
+        "plan": None
     }
 
 state = reset_state()
@@ -58,9 +52,6 @@ state = reset_state()
 while True:
     user_input = input("You: ").strip()
 
-    # ==============================
-    # 🟢 LEAD CAPTURE MODE
-    # ==============================
     if state["intent"] == "high_intent":
 
         if is_cancel(user_input):
@@ -79,7 +70,6 @@ while True:
             print("Bot:", get_step_prompt(state["step"]))
             continue
 
-        # 🧩 NAME
         if state["step"] == "name":
 
             if not is_valid_name(user_input):
@@ -89,10 +79,9 @@ while True:
 
             state["name"] = user_input
             state["step"] = "email"
-            print("Bot: Got it 👍", get_step_prompt("email"))
+            print("Bot: Got it.", get_step_prompt("email"))
             continue
 
-        # 🧩 EMAIL
         elif state["step"] == "email":
 
             if not is_valid_email(user_input):
@@ -107,7 +96,6 @@ while True:
             print("Bot:", get_step_prompt("platform"))
             continue
 
-        # 🧩 PLATFORM
         elif state["step"] == "platform":
 
             if user_input.lower() in ["no", "none", "dont know", "skip"]:
@@ -124,12 +112,8 @@ while True:
             state = reset_state()
             continue
 
-    # ==============================
-    # 🟢 NORMAL MODE
-    # ==============================
     intent = detect_intent(user_input).strip().lower()
 
-    # ⭐ Detect plan (bonus)
     if "pro" in user_input.lower():
         state["plan"] = "Pro"
     elif "basic" in user_input.lower():
